@@ -14,7 +14,7 @@ export const PROVIDER_ID = 'keenable'
 export const DEFAULT_BASE_URL = 'https://api.keenable.ai'
 
 /** Package version, sent in the user agent. Bump with package.json. */
-export const VERSION = '0.1.1'
+export const VERSION = '0.1.2'
 
 /**
  * Application name sent as `X-Keenable-Title`. The keyless endpoints reject a
@@ -37,6 +37,24 @@ const USER_AGENT = `@keenable/dsh-keenable/${VERSION} (+https://github.com/keena
 export function endpoint(baseURL, path, apiKey) {
   const base = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL
   return `${base}${path}${apiKey ? '' : '/public'}`
+}
+
+/**
+ * The API key for one operation. A fixed string is used as is; a function is
+ * called per operation, so a key saved through Harness's credentials service
+ * reaches the next request without a restart.
+ *
+ * @param {string | (() => Promise<string | undefined>)} apiKey - the key, or its resolver.
+ * @param {string} label - operation name used in messages ("Keenable search").
+ * @returns {Promise<string>} the key, or `''` for keyless.
+ */
+export async function resolveApiKey(apiKey, label) {
+  if (typeof apiKey !== 'function') return apiKey
+  try {
+    return nonblank(await apiKey()) ?? ''
+  } catch (error) {
+    throw providerError(`${label} could not read KEENABLE_API_KEY: ${describe(error)}`, error)
+  }
 }
 
 /**
